@@ -12,6 +12,10 @@ import math, random, copy, characters
 
 ################################################################################
 def appStarted(app):
+    app.gravity = 0.2
+    app.keeptrack = 0
+    app.velocityX = 2
+    app.velocityY = 0
     app.jumpCounter = 0
     app.gameOver = False
     app.paused = False
@@ -21,7 +25,7 @@ def appStarted(app):
                   app.width // 2 - app.height // 20, 
                   2 * app.height // 3 - app.height // 20]
 
-    app.stateX = "right"
+    app.stateX = "leftx"
     app.stateY = "down"
 
     app.drones = []
@@ -180,7 +184,7 @@ def play_drawCube(app, canvas):
 
 def play_keyPressed(app, event):
     if app.gameOver == False:
-
+        
         # Left, Right, Up, Down
         if event.key == "Left":
             if app.distanceNow > 0:
@@ -191,8 +195,12 @@ def play_keyPressed(app, event):
            
 
         elif event.key == "Up":
-            app.stateY = "up"
-
+            print(play_isAbove(app)[1][1]+app.shifterY-2, 2 * app.height // 3 + app.height // 20)
+            if play_isAbove(app)[1][1]+app.shifterY-6 < 2 * app.height // 3 + app.height // 20:
+            
+                app.velocityY = -10
+            
+            # Fuck
 
         elif event.key == "Down":
             app.stateY = "down"
@@ -262,70 +270,50 @@ def play_isAbove(app):
 
 
     if point[1] + app.shifterY < 2 * app.height // 3 + app.height // 20:
-                return False
+                return [False]
 
-    return True
+    return [True, point]
 #####
-def play_hidden(app):
-    for i in range(0, len(app.terrain) - 1):
-        if ((app.width // 2 - app.height // 20) < (app.terrain[i][0] + app.shifterX)):
-            point = app.terrain[i]
-            break
 
-    if (app.width // 2 - app.height // 20 + 5) >= (app.terrain[i][0] + app.shifterX):
-        app.velocityX = 0
-        print(app.velocityX)
-
-def play_rightBound(app):
-    for i in range(0, len(app.terrain) - 1):
-        if (app.width // 2 + app.height // 20) <= (app.terrain[i][0] + app.shifterX):
-            point1 = app.terrain[i]
-            point2 = app.terrain[i + 1]
-            break
-
-    if point2[1] + app.shifterY >= point1[1] + app.shifterY:
-        if (app.width // 2 + app.height // 20) > app.terrain[i][0]:
-            return False
-    return True
 
 
 
 def play_isLegal(app):
     # point1, point2 = findBlockItIsOn(app)
-    return play_isAbove(app) and play_rightBound(app)
+    return play_isAbove(app)[0]
 
 
 # Functions to move the pieces 
 def play_moveLeft(app):
-    app.shifterX += 2
-    app.distanceNow -= 2
+    app.shifterX += app.velocityX
+    app.distanceNow -= app.velocityX
     
     if not play_isLegal(app):
-        app.shifterX -= 2
-        app.distanceNow += 2
+        app.shifterX -= app.velocityX
+        app.distanceNow += app.velocityX
 
 def play_moveRight(app):
-    app.shifterX -= 2
-    app.distanceMoved += 2
-    app.distanceNow += 2
+    app.shifterX -= app.velocityX
+    app.distanceMoved += app.velocityX
+    app.distanceNow += app.velocityX
     
     if not play_isLegal(app):
-        app.shifterX += 2
-        app.distanceMoved -= 2
-        app.distanceNow -= 2
+        app.shifterX += app.velocityX
+        app.distanceMoved -= app.velocityX
+        app.distanceNow -= app.velocityX
 
 def play_moveUp(app):
-    app.shifterY += 2
+    app.shifterY += app.velocityY
     
     if not play_isLegal(app):
-        app.shifterY -= 2
+        app.shifterY -= app.velocityY
 
 def play_moveDown(app):
-    app.shifterY -= 2
+    app.shifterY -= app.velocityY
 
     
     if not play_isLegal(app):
-        app.shifterY += 2
+        app.shifterY += app.velocityY
         
 
 def play_jump(app):
@@ -336,7 +324,8 @@ def play_jump(app):
 
 
 def play_timerFired(app):
-    play_hidden(app)
+    if app.velocityY <3:
+        app.velocityY += app.gravity
     if app.stateX == "right":
         play_moveRight(app)
 
@@ -344,6 +333,7 @@ def play_timerFired(app):
         if app.distanceNow > 0:
 
             play_moveLeft(app)
+
 
     
     if app.stateY == "up":
@@ -359,23 +349,26 @@ def generateDrone(app):
     
     for i in range(100, 100000, 1000):
 
-        coin = random.randint(1,6)
-        
-        #if coin == 2 or coin == 3 or coin == 4:
         x = characters.Drone(i, i + 1000)
         app.drones.append(x)
 
-        
+    app.drones.pop(0)
+    app.drones.pop(1)
+
 def drawDrone(app, canvas):
     
     for aDrone in app.drones:
-
+        if aDrone == None:
+            continue
         for i in range(len(app.terrain)):
             point = None
             if aDrone.spawn < app.terrain[i][0]:
                 point = app.terrain[i]
                 break
 
+            
+        if point == None: 
+                continue
 
         canvas.create_rectangle(aDrone.body[0] + app.shifterX, point[1] - 450+ app.shifterY, 
                                     aDrone.body[2]+ app.shifterX, point[1] -550  + app.shifterY , 
@@ -392,13 +385,58 @@ def drawDrone(app, canvas):
 
 
 def play_generateTerrain(app):
-    while len(app.terrain) < 1000:
+    while len(app.terrain) <= 50:
         # Take the points we just had
         oldX = app.terrain[-1][0]
         oldY = app.terrain[-1][1]
 
         # Choose a random number to change x by
-        dx = random.randint(80, 400)
+        dx = random.randint(100, 200)
+
+        # Get the cube height
+        cubeHeight = app.height // 10
+
+        # Get list of possible change in y
+        dyList = [cubeHeight, 1.5 * cubeHeight, 
+                2 * cubeHeight, 2.5 * cubeHeight,
+                3 * cubeHeight, 3.5 * cubeHeight, 4 * cubeHeight]
+
+        # Choose y 
+        i = random.randint(0, 6)
+        dy = dyList[i]
+
+        # Establish new x coord
+        newX = int(oldX + dx)
+
+        # Decide whether the next point will be up or down
+        direction = 0
+        if i in [0,1,2,3]:
+            x = random.randint(0,2)
+            if x == 0:
+                direction = 1
+            if x == 1 or x == 2:
+                direction = -1
+        
+        # Get new y coord
+        newY  = int(oldY + direction * dy)
+        
+        # Get the two new points to make a line
+        newPoint1 = (oldX, newY)
+        newPoint2 = (newX, newY)
+
+        # Add points to terrain
+        app.terrain.append(newPoint1)
+        app.terrain.append(newPoint2)
+
+
+
+    while 50 < len(app.terrain) <= 100:
+        # Take the points we just had
+        oldX = app.terrain[-1][0]
+        oldY = app.terrain[-1][1]
+
+        # Choose a random number to change x by
+        dx = random.randint(150, 250)
 
         # Get the cube height
         cubeHeight = app.height // 10
@@ -420,9 +458,9 @@ def play_generateTerrain(app):
         if i in [0,1,2,3]:
             x = random.randint(0,1)
             if x == 0:
-                direction = -1
-            if x == 1:
                 direction = 1
+            if x == 1:
+                direction = -1
         
         # Get new y coord
         newY  = int(oldY + direction * dy)
@@ -434,6 +472,100 @@ def play_generateTerrain(app):
         # Add points to terrain
         app.terrain.append(newPoint1)
         app.terrain.append(newPoint2)
+
+    while 100 < len(app.terrain) <= 150:
+        # Take the points we just had
+        oldX = app.terrain[-1][0]
+        oldY = app.terrain[-1][1]
+
+        # Choose a random number to change x by
+        dx = random.randint(200, 300)
+
+        # Get the cube height
+        cubeHeight = app.height // 10
+
+        # Get list of possible change in y
+        dyList = [cubeHeight, 1.5 * cubeHeight, 
+                2 * cubeHeight, 2.5 * cubeHeight,
+                3 * cubeHeight, 3.5 * cubeHeight, 4 * cubeHeight]
+
+        # Choose y 
+        i = random.randint(0, 6)
+        dy = dyList[i]
+
+        # Establish new x coord
+        newX = int(oldX + dx)
+
+        # Decide whether the next point will be up or down
+        direction = 0
+        if i in [0,1,2,3]:
+            x = random.randint(0,4)
+            if x == 0 or x == 1 or x == 2:
+                direction = 1
+            if x == 3 or x == 4:
+                direction = -1
+        
+        # Get new y coord
+        newY  = int(oldY + direction * dy)
+        
+        # Get the two new points to make a line
+        newPoint1 = (oldX, newY)
+        newPoint2 = (newX, newY)
+
+        # Add points to terrain
+        app.terrain.append(newPoint1)
+        app.terrain.append(newPoint2)
+
+
+
+    while 150 < len(app.terrain) <= 200:
+        # Take the points we just had
+        oldX = app.terrain[-1][0]
+        oldY = app.terrain[-1][1]
+
+        # Choose a random number to change x by
+        dx = random.randint(300, 400)
+
+        # Get the cube height
+        cubeHeight = app.height // 10
+
+        # Get list of possible change in y
+        dyList = [cubeHeight, 1.5 * cubeHeight, 
+                2 * cubeHeight, 2.5 * cubeHeight,
+                3 * cubeHeight, 3.5 * cubeHeight, 4 * cubeHeight]
+
+        # Choose y 
+        i = random.randint(0, 6)
+        dy = dyList[i]
+
+        # Establish new x coord
+        newX = int(oldX + dx)
+
+        # Decide whether the next point will be up or down
+        direction = 0
+        if i in [0,1,2,3]:
+            x = random.randint(0,3)
+            if x == 0 or x == 1 or x == 2:
+                direction = 1
+            if x == 3:
+                direction = -1
+        
+        # Get new y coord
+        newY  = int(oldY + direction * dy)
+        
+        # Get the two new points to make a line
+        newPoint1 = (oldX, newY)
+        newPoint2 = (newX, newY)
+
+        # Add points to terrain
+        app.terrain.append(newPoint1)
+        app.terrain.append(newPoint2)
+
+
+
+
+
+
 
 # Draw the terrain
 def play_drawTerrain(app, canvas):
