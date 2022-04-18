@@ -1,29 +1,29 @@
 from cmu_112_graphics import *
+
 import math, random, copy, characters
-################################################################################
 
-# Make everything in appstarted into the restart button
-# # 2. How to make jump
+#from characters import *
+
+# Ask about importing functions from other files
 
 
-# Take points, make square, check if it is in the square, do this for list
 
-# check center minus radius, x and y
 
 ################################################################################
 def appStarted(app):
+    app.terrain = [(0, 555), (1440, 555)]
+    play_generateTerrain(app)
     app.gravity = 0.2
-    app.keeptrack = 0
     app.velocityX = 2
     app.velocityY = 0
-    app.jumpCounter = 0
     app.gameOver = False
     app.paused = False
     # Coordinates of cube
-    app.cube = [app.width // 2 + app.height // 20, 
-                  2 * app.height // 3 + app.height // 20, 
-                  app.width // 2 - app.height // 20, 
-                  2 * app.height // 3 - app.height // 20]
+    app.cube = [app.width // 2 + 30, 
+                  2 * app.height // 3 + 30, 
+                  app.width // 2 - 30, 
+                  2 * app.height // 3 - 30]
+    
 
     app.stateX = "leftx"
     app.stateY = "down"
@@ -31,16 +31,12 @@ def appStarted(app):
     app.drones = []
     generateDrone(app)
 
+    app.spikes = []
+    play_generateSpikes(app)
+
     # Screen
     app.mode = "home"
     app.modes = ["home", "help", "play", "scores", "gameOver"]
-
-    # points on the terrain
-    app.terrain = [(0, 555), (1440, 555)]
-    play_generateTerrain(app)
-
-    app.checkPoints = []
-    getCheckPoints(app)
 
     # Check is cube is moving
     app.moving = False
@@ -57,7 +53,6 @@ def appStarted(app):
 
     # Timer Delay
     app.timerDelay = 1
-
 
 ################################################################################
 
@@ -171,11 +166,6 @@ def gameOver_keyPressed(app, event):
 
 
 ################################################################################
-def getCheckPoints(app):
-    for i in range(0, len(app.terrain), 2):
-        app.checkPoints.append(app.terrain[i])
-
-
 def play_drawCube(app, canvas):
     
     # Draws cube
@@ -195,8 +185,7 @@ def play_keyPressed(app, event):
            
 
         elif event.key == "Up":
-            print(play_isAbove(app)[1][1]+app.shifterY-2, 2 * app.height // 3 + app.height // 20)
-            if play_isAbove(app)[1][1]+app.shifterY-6 < 2 * app.height // 3 + app.height // 20:
+            if play_isAbove(app)[1][1]+app.shifterY-6 < 2 * app.height // 3 + 30:
             
                 app.velocityY = -10
             
@@ -217,11 +206,11 @@ def play_keyPressed(app, event):
             # Reset all values
             app.gameOver = False
             app.paused = False
-            app.cube = [app.width // 2 + app.height // 20, 
-                        2 * app.height // 3 + app.height // 20, 
-                        app.width // 2 - app.height // 20, 
-                        2 * app.height // 3 - app.height // 20]
-            app.terrain = [(0, 551), (1440, 551)]
+            app.cube = [app.width // 2 + 30, 
+                        2 * app.height // 3 + 30, 
+                        app.width // 2 - 30, 
+                        2 * app.height // 3 - 30]
+            app.terrain = [(0, 550), (1440, 550)]
             app.moving = False
 
             app.distanceMoved = 0
@@ -264,12 +253,12 @@ def play_isAbove(app):
     
 
     for i in range(0, len(app.terrain) - 1):
-        if ((app.width // 2 - app.height // 20) < (app.terrain[i][0] + app.shifterX)):
+        if ((app.width // 2 - 30) < (app.terrain[i][0] + app.shifterX)):
             point = app.terrain[i]
             break
 
 
-    if point[1] + app.shifterY < 2 * app.height // 3 + app.height // 20:
+    if point[1] + app.shifterY < 2 * app.height // 3 + 30:
                 return [False]
 
     return [True, point]
@@ -316,15 +305,8 @@ def play_moveDown(app):
         app.shifterY += app.velocityY
         
 
-def play_jump(app):
-    app.shifterY += 200
-    
-    if not play_isLegal(app):
-        app.shifterY -= 200
-
-
 def play_timerFired(app):
-    if app.velocityY <3:
+    if app.velocityY <5:
         app.velocityY += app.gravity
     if app.stateX == "right":
         play_moveRight(app)
@@ -344,6 +326,7 @@ def play_timerFired(app):
 
     
 
+ ###############################################################################
 
 def generateDrone(app):
     
@@ -383,7 +366,69 @@ def drawDrone(app, canvas):
                                     fill = "black", outline = "white")
 
 
+def moveDrone(app):
+    for aDrone in app.drones:
 
+        return
+
+################################################################################
+
+def play_generateSpikes(app):    
+    for i in range(len(app.terrain)):
+        app.spikes.append(app.terrain[i])
+
+
+    
+    for i in range(1, len(app.terrain) - 2):
+
+            if 0 < i <= 50:
+                numberOfSpikes = random.randint(3,6)
+
+            elif 50 < i <= 100:
+                numberOfSpikes = random.randint(5,10)
+
+            else:
+                numberOfSpikes = random.randint(8,10)
+
+            
+            #difference = abs(app.terrain[i+2][0] - app.terrain[i][0])
+            #spikesDX = random.randint(0, difference)
+            #x += spikesDX
+            
+            app.spikes.append((app.terrain[i][0], app.terrain[i][1], numberOfSpikes))
+            
+
+def play_drawSpikes(app,canvas):
+
+    '''def play_isAbove(app):
+    
+    # Check if the block is above everything
+    
+    
+
+    for i in range(0, len(app.terrain) - 1):
+        if ((app.width // 2 - 30) < (app.terrain[i][0] + app.shifterX)):
+            point = app.terrain[i]
+            break
+
+
+    if point[1] + app.shifterY < 2 * app.height // 3 + 30:
+                return [False]
+
+    return [True, point]'''
+    for i in range(2, len(app.spikes), 2):
+        x = app.spikes[i]
+        canvas.create_polygon(x[0]+ app.shifterX, x[1]+ app.shifterY,
+                              x[0] + 15 + app.shifterX, x[1] - 30 + app.shifterY,
+                              x[0] + 30 + app.shifterX, x[1] + app.shifterY)
+
+        '''
+        canvas.create_polygon(x[0] + app.shifterX,x[1] + app.shifterY,
+                              x[2]+ app.shifterX,x[3]+ app.shifterY,
+                              x[4]+ app.shifterX,x[5]+ app.shifterY, fill = "white")
+                              '''
+
+################################################################################
 def play_generateTerrain(app):
     while len(app.terrain) <= 50:
         # Take the points we just had
@@ -391,18 +436,18 @@ def play_generateTerrain(app):
         oldY = app.terrain[-1][1]
 
         # Choose a random number to change x by
-        dx = random.randint(100, 200)
+        dx = random.randrange(100, 200, 5)
 
         # Get the cube height
-        cubeHeight = app.height // 10
+        
 
         # Get list of possible change in y
-        dyList = [cubeHeight, 1.5 * cubeHeight, 
-                2 * cubeHeight, 2.5 * cubeHeight,
-                3 * cubeHeight, 3.5 * cubeHeight, 4 * cubeHeight]
+        dyList = [2.5 * 30, 
+                3 * 30,
+                4 * 30, 5 * 30]
 
         # Choose y 
-        i = random.randint(0, 6)
+        i = random.randint(0, 3)
         dy = dyList[i]
 
         # Establish new x coord
@@ -436,18 +481,14 @@ def play_generateTerrain(app):
         oldY = app.terrain[-1][1]
 
         # Choose a random number to change x by
-        dx = random.randint(150, 250)
+        dx = random.randrange(150, 250, 5)
 
-        # Get the cube height
-        cubeHeight = app.height // 10
-
-        # Get list of possible change in y
-        dyList = [cubeHeight, 1.5 * cubeHeight, 
-                2 * cubeHeight, 2.5 * cubeHeight,
-                3 * cubeHeight, 3.5 * cubeHeight, 4 * cubeHeight]
+        dyList = [2.5 * 30, 
+                3 * 30,
+                4 * 30, 5 * 30]
 
         # Choose y 
-        i = random.randint(0, 6)
+        i = random.randint(0, 3)
         dy = dyList[i]
 
         # Establish new x coord
@@ -479,19 +520,17 @@ def play_generateTerrain(app):
         oldY = app.terrain[-1][1]
 
         # Choose a random number to change x by
-        dx = random.randint(200, 300)
+        dx = random.randrange(200, 300, 5)
 
         # Get the cube height
-        cubeHeight = app.height // 10
-
-        # Get list of possible change in y
-        dyList = [cubeHeight, 1.5 * cubeHeight, 
-                2 * cubeHeight, 2.5 * cubeHeight,
-                3 * cubeHeight, 3.5 * cubeHeight, 4 * cubeHeight]
+        dyList = [2.5 * 30, 
+                3 * 30,
+                4 * 30, 5 * 30]
 
         # Choose y 
-        i = random.randint(0, 6)
+        i = random.randint(0, 3)
         dy = dyList[i]
+
 
         # Establish new x coord
         newX = int(oldX + dx)
@@ -524,18 +563,14 @@ def play_generateTerrain(app):
         oldY = app.terrain[-1][1]
 
         # Choose a random number to change x by
-        dx = random.randint(300, 400)
+        dx = random.randrange(300, 400, 5)
 
-        # Get the cube height
-        cubeHeight = app.height // 10
-
-        # Get list of possible change in y
-        dyList = [cubeHeight, 1.5 * cubeHeight, 
-                2 * cubeHeight, 2.5 * cubeHeight,
-                3 * cubeHeight, 3.5 * cubeHeight, 4 * cubeHeight]
+        dyList = [2.5 * 30, 
+                3 * 30,
+                4 * 30, 5 * 30]
 
         # Choose y 
-        i = random.randint(0, 6)
+        i = random.randint(0, 3)
         dy = dyList[i]
 
         # Establish new x coord
@@ -563,10 +598,6 @@ def play_generateTerrain(app):
 
 
 
-
-
-
-
 # Draw the terrain
 def play_drawTerrain(app, canvas):
 
@@ -587,15 +618,18 @@ def play_redrawAll(app, canvas):
 
     # Draws terrain
     play_drawTerrain(app, canvas)
-    canvas.create_text(app.width // 2, 20, 
-                       text = f"Score: {app.distanceNow // 10}", 
-                       fill = "black", font = "Arial 30" )
+    # Create pointless terrain to the left of x = 0
+    canvas.create_rectangle(-100000, app.height, 0, 555, fill = "black")
 
+    play_drawSpikes(app,canvas)
     drawDrone(app, canvas)
 
 
-    # Create pointless terrain to the left of x = 0
-    canvas.create_rectangle(-100000, app.height, 0, 555, fill = "black")
+
+
+    canvas.create_text(app.width // 2, 20, 
+                       text = f"Score: {app.distanceNow // 10}", 
+                       fill = "black", font = "Arial 30" )
     
 
 runApp(width = 1440, height = 770)
