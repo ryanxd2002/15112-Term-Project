@@ -1,47 +1,72 @@
 from cmu_112_graphics import *
 import math, random, numpy as np
-
 ################################################################################
 ################################################################################
 
 class Drone:
     def __init__(self, x0, x1):
+
+        # Create random number
         randomNumber = random.randint(30, 50)
 
+        # Take in patrol range
         self.patrolPoint1 = x0
         self.patrolPoint2 = x1
+
+        # Take spawn point
         self.spawn = (x0 + x1) // 2
+
         self.size = randomNumber
 
+        # Body coords
         self.body = [self.spawn - self.size,
                      150 + self.size, 
                      self.spawn + self.size, 
                      150 - self.size]
-
+        
+        # Eye coords
         self.eye = [self.spawn - self.size ,
                      150 + self.size , 
                      self.spawn + self.size , 
                      150 - self.size]
 
+        # Pupil coords
         self.pupil = [self.spawn - (self.size // 2),
                      150, 
                      self.spawn + (self.size // 2), 
                      150 + (self.size)]
 
-class Spikes:
-    def __init__(self, x1, x2, numberOfSpikes):
+        # Scanner
+        self.scanner = [self.spawn, self.spawn + self.size,
+                        self.spawn - self.size,
+                        self.spawn + self.size]
 
-        self.numberOfSpikes = numberOfSpikes
-        
+        self.point = []
+
+################################################################################
+
+class Spikes:
+    def __init__(self, x, y):
+
+        # Create coords
+        self.coords = [(x,y), (x + 10, y - 20), (x + 20, y)] 
 
 class Turtle:
-    def __init__(self, x, y):
-        self.beam = 0
+    def __init__(self, x, y, i):
+
+        # Take index
+        self.i = i
+
+        # Create coords
+        self.coords = [[x, y - 40], [x + 40, y], [x + 20, y - 40], [x + 80, y]]
 
 class Crusher:
     def __init__(self, x, y):
-        self.beam = 0
 
+        # Create coords
+        self.coords = [(x,y)]
+
+        self.ball = [[x, y]]
 
 
 

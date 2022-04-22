@@ -1,45 +1,57 @@
 from cmu_112_graphics import *
-
-import math, random, copy, characters
-
-#from characters import *
-
-# Ask about importing functions from other files
-
-
-
-
+import math, random, copy, characters, seperation
 ################################################################################
+################################################################################
+
 def appStarted(app):
+
+    ########################################
+    # Generate the game and its attributes #
+    ########################################
+
     app.terrain = [(0, 555), (1440, 555)]
     play_generateTerrain(app)
-    app.gravity = 0.2
-    app.velocityX = 2
-    app.velocityY = 0
-    app.gameOver = False
-    app.paused = False
+
+    app.drones = []
+    generateDrone(app)
+    
+    app.isSeen = False
+
+    app.spikes = []
+    play_generateSpikes(app)
+
+    app.turtles = []
+    play_generateTurtles(app)
+
+    app.turtleDX = 2
+
+    app.crushers = []
+    play_generateCrushers(app)
+
     # Coordinates of cube
     app.cube = [app.width // 2 + 30, 
                   2 * app.height // 3 + 30, 
                   app.width // 2 - 30, 
                   2 * app.height // 3 - 30]
+
+    app.gravity = 0.2
+    app.velocityX = 2
+    app.velocityY = 0
+    app.droneShifter = -1
+    app.droneDX = 1
+    app.turtleDX = 1
+
+    app.gameOver = False
+    app.paused = False
     
+    app.highScore = int(seperation.readFile("score.txt"))
 
-    app.stateX = "leftx"
+    app.stateX = "left"
     app.stateY = "down"
-
-    app.drones = []
-    generateDrone(app)
-
-    app.spikes = []
-    play_generateSpikes(app)
 
     # Screen
     app.mode = "home"
     app.modes = ["home", "help", "play", "scores", "gameOver"]
-
-    # Check is cube is moving
-    app.moving = False
 
     # Checks total distance moved
     app.distanceMoved = 0
@@ -50,28 +62,28 @@ def appStarted(app):
     # Shiters
     app.shifterX = 0
     app.shifterY = 0
+    app.hidden = False
 
     # Timer Delay
     app.timerDelay = 1
+
+    app.shots = []
 
 ################################################################################
 
 # Draws home screen
 def home_redrawAll(app, canvas):
-    canvas.create_rectangle(0,0, app.width, app.height, fill = "black")
+    canvas.create_rectangle(0, 0, app.width, app.height, fill = "black")
     canvas.create_rectangle(app.width // 2 - 175, app.height // 2 + 100, 
                             app.width // 2 + 175, app.height // 2 - 100,
-
                             outline = "white", width = "5")
 
     canvas.create_rectangle(app.width // 2 - 150, app.height // 2 + 300, 
                             app.width // 2 + 150, app.height // 2 + 150,
-
                             outline = "white", width = "5")
 
     canvas.create_rectangle(app.width // 2 - 150, app.height // 2 - 150, 
                             app.width // 2 + 150, app.height // 2 - 300,
-
                             outline = "white", width = "5")
 
     canvas.create_text(app.width // 2, app.height // 2,
@@ -84,14 +96,18 @@ def home_redrawAll(app, canvas):
                     text = "Help", font = "Arial 75", fill = "white")
 
 def home_mousePressed(app, event):
+
+    # Pressed play button
     if app.width // 2 - 175 <= event.x <= app.width // 2 + 175:
         if app.height // 2 - 100 <= event.y <= app.height // 2 + 100:
             app.mode = "play"
 
+    # Pressed scores button
     if app.width // 2 - 150 <= event.x <= app.width // 2 + 150:
         if app.height // 2 + 150 <= event.y <= app.height // 2 + 300:
             app.mode = "scores"
 
+    # Pressed help button
     if app.width // 2 - 150 <= event.x <= app.width // 2 + 150:
         if app.height // 2 - 300 <= event.y <= app.height // 2 - 150:
             app.mode = "help"
@@ -103,14 +119,18 @@ def home_keyPressed(app, event):
 
 # Draws help screen
 def help_redrawAll(app, canvas):
-    canvas.create_rectangle(0,0, app.width, app.height, fill = "black")
+    canvas.create_rectangle(0, 0, app.width, app.height, fill = "black")
+
     canvas.create_text(app.width // 2, 100,
                     text = "Press left, right, up, and down arrow keys to move",         
                                       font = "Arial 50", fill = "white")
+
     canvas.create_line(0, 200, app.width, 200, fill = "white", width = 10)
+
     canvas.create_text(app.width // 2, 300,
                     text = "Avoid enemies and get the highest score possible!",         
                                       font = "Arial 50", fill = "white")
+
     canvas.create_line(0, 400, app.width, 400, fill = "white", width = 10)
 
     canvas.create_text(app.width // 2, 500,
@@ -130,17 +150,21 @@ def help_keyPressed(app, event):
 
 ################################################################################
 
-# Draws high score
+# Draws high score screen
 def scores_redrawAll(app, canvas):
-    canvas.create_rectangle(0,0, app.width, app.height, fill = "black")
-    canvas.create_text(app.width // 2, 150,
-                    text = "HIGH SCORE ",         
-                                      font = "Arial 200", fill = "white")
+    canvas.create_rectangle(0, 0, app.width, app.height, fill = "black")
+    canvas.create_text(app.width // 2, 150, 
+                       text = f"HIGH SCORE",         
+                       font = "Arial 200", fill = "white")
 
-    canvas.create_rectangle(50, 300, 
-                            1390, 700,
-
+    canvas.create_rectangle(50, 300, 1390, 700,
                             outline = "white", width = "5")
+
+    canvas.create_text(770, 500, text = f"{app.highScore}",
+                       fill = "white", font = "Arial 200")
+
+
+
 
 def scores_keyPressed(app, event):
 
@@ -150,130 +174,110 @@ def scores_keyPressed(app, event):
 
 ################################################################################
 
+# Draws gameover screen
 def gameOver_redrawAll(app, canvas):
         canvas.create_rectangle(0, 0, app.width, app.height, fill = "black")
-        canvas.create_text(app.width // 2, 200,
-                    text = "Game Over ",         
-                                      font = "Arial 200", fill = "white")
+        canvas.create_text(app.width // 2, 200, text = "Game Over ",
+                           font = "Arial 200", fill = "white")
 
-        canvas.create_text(app.width // 2, 500,
-                    text = f"Score: {app.distanceNow}",         
-                                      font = "Arial 200", fill = "white")
+        canvas.create_text(app.width // 2, 500, 
+                           text = f"Score: {app.distanceNow // 10}", 
+                           font = "Arial 200", fill = "white")
+
+def gameOver_setHighScore(app):
+    app.highScore = seperation.readFile("score.txt")
+
+
+def gameOver_getHighScore(app):
+        if app.distanceNow // 10 > app.highScore:
+            seperation.truncate("score.txt")
+            seperation.writeFile("score.txt", f"{app.distanceNow // 10}")
+
 
 def gameOver_keyPressed(app, event):
-    if event.key == "h":
-        app.mode = "home"
 
+    # Return home
+    if event.key == "Escape":
+       appStarted(app)
 
 ################################################################################
+
+# Draws cube
 def play_drawCube(app, canvas):
     
     # Draws cube
     canvas.create_rectangle(app.cube[0], app.cube[1], app.cube[2], app.cube[3], 
-                        fill = "blue", outline = "blue")
+                            fill = "blue", outline = "blue")
 
+def play_isHidden(app):
+    
+    point = None
+
+    for i in range(len(app.terrain) - 1):
+        if (app.terrain[i][0] + app.shifterX) >= (app.width // 2 - 30):
+            if app.terrain[i + 1][1] < app.terrain[i][1]:
+                point = app.terrain[i]
+                break
+        
+    if (point[0] + app.shifterX) <= (app.width // 2):
+        return True
+    
+    return False
+    
 def play_keyPressed(app, event):
     if app.gameOver == False:
         
-        # Left, Right, Up, Down
+        # Left, Right
         if event.key == "Left":
             if app.distanceNow > 0:
                 app.stateX = "left"
         
         elif event.key == "Right":
             app.stateX = "right"
-           
 
+        # Jump
         elif event.key == "Up":
-            if play_isAbove(app)[1][1]+app.shifterY-6 < 2 * app.height // 3 + 30:
-            
+            if ((play_isAbove(app)[1][1] + app.shifterY - 6) < 
+                (2 * app.height // 3 + 30)):
                 app.velocityY = -10
-            
-            # Fuck
 
-        elif event.key == "Down":
-            app.stateY = "down"
-
+        # Pause
         elif event.key == "p":
             app.paused = not app.paused
         
+        # Restart
         elif event.key == "r":
             appStarted(app)
 
+        # Go to home screen
         elif event.key == "Escape":
-            app.mode = "home"
+            appStarted(app)
 
-            # Reset all values
-            app.gameOver = False
-            app.paused = False
-            app.cube = [app.width // 2 + 30, 
-                        2 * app.height // 3 + 30, 
-                        app.width // 2 - 30, 
-                        2 * app.height // 3 - 30]
-            app.terrain = [(0, 550), (1440, 550)]
-            app.moving = False
-
-            app.distanceMoved = 0
-            
-            app.distanceNow = 0
-
-            app.shifterX = 0
-            app.shifterY = 0
-
-    elif event.key == "r":
+    elif event.key == "Escape":
         appStarted(app)
 
-    elif event.key == "h":
-        app.mode = "home"
-
-def play_mousePressed(app, event):
-    if event.x <= app.width // 2:
-        play_moveLeft(app)
-
-    if event.x > app.width // 2:
-        play_moveRight(app)
-
-
-def play_mouseDragged(app, event):
-    if event.x <= app.width // 2:
-        play_moveLeft(app)
-
-    if event.x > app.width // 2:
-        play_moveRight(app)   
-
-
-'''
-THIS IS THE IS ABOVE FUNCTION
-'''
 
 def play_isAbove(app):
     
     # Check if the block is above everything
-    
-    
-
     for i in range(0, len(app.terrain) - 1):
         if ((app.width // 2 - 30) < (app.terrain[i][0] + app.shifterX)):
             point = app.terrain[i]
             break
 
-
     if point[1] + app.shifterY < 2 * app.height // 3 + 30:
                 return [False]
 
     return [True, point]
-#####
-
-
-
 
 def play_isLegal(app):
-    # point1, point2 = findBlockItIsOn(app)
+    # Check if isLegal, may have different conditions
     return play_isAbove(app)[0]
-
 
 # Functions to move the pieces 
 def play_moveLeft(app):
+
+    # Move the distance and shifter if possible
     app.shifterX += app.velocityX
     app.distanceNow -= app.velocityX
     
@@ -282,6 +286,8 @@ def play_moveLeft(app):
         app.distanceNow += app.velocityX
 
 def play_moveRight(app):
+
+    # Move the distance and shifter if possible
     app.shifterX -= app.velocityX
     app.distanceMoved += app.velocityX
     app.distanceNow += app.velocityX
@@ -292,39 +298,77 @@ def play_moveRight(app):
         app.distanceNow -= app.velocityX
 
 def play_moveUp(app):
+
+    # Move the distance and shifter if possible
     app.shifterY += app.velocityY
     
     if not play_isLegal(app):
         app.shifterY -= app.velocityY
 
 def play_moveDown(app):
+    
+    # Move the distance and shifter if possible
     app.shifterY -= app.velocityY
 
-    
     if not play_isLegal(app):
         app.shifterY += app.velocityY
         
-
+# Timerfired
 def play_timerFired(app):
-    if app.velocityY <5:
-        app.velocityY += app.gravity
-    if app.stateX == "right":
-        play_moveRight(app)
 
-    elif app.stateX == "left":
-        if app.distanceNow > 0:
+    if app.paused == False:
+        for i in range(len(app.drones)):
+            if app.drones[i].point == [] :
+                continue
+            
+            if seperation.separating_axis_theorem([(app.width // 2 + 30, 2 * app.height // 3 + 30),
+                                                   (app.width // 2 - 30,2 * app.height // 3 - 30)],
+                                                  [(app.drones[i].scanner[0] + app.shifterX, 
+                                                    app.drones[i].point[0][1] - 600+ app.shifterY),
+                                                    (app.drones[i].scanner[2]  + app.shifterX, app.height),
+                                            (app.drones[i].scanner[3]  + app.shifterX, app.height)]):
+                                
+                                app.isSeen = True
 
-            play_moveLeft(app)
+            else:
+                app.isSeen = False
 
+            if app.isSeen == True and not play_isHidden(app):
+                
+                app.mode = "gameOver"
+                gameOver_getHighScore(app)
+                gameOver_setHighScore(app)
 
-    
-    if app.stateY == "up":
-        play_moveUp(app)
+        if (play_touchingTurtle(app) or (play_ballCollision(app) and not play_isHidden(app))
+            or play_spikeCollision(app)):
+                app.mode = "gameOver"
+                gameOver_getHighScore(app)
+                gameOver_setHighScore(app)
 
-    elif app.stateY == "down":
-        play_moveDown(app)
+        # Moves objects
+        play_moveDrone(app)
+        play_moveTurtles(app)
+        play_dropBall(app)
 
-    
+        # Checks to make sure the gravity should keep changing
+        if app.velocityY < 5:
+            app.velocityY += app.gravity
+        
+        # Checks movement direction
+        if app.stateX == "right":
+            
+            play_moveRight(app)
+
+        elif app.stateX == "left":
+
+            if app.distanceNow > 0:
+                play_moveLeft(app)
+
+        if app.stateY == "up":
+            play_moveUp(app)
+
+        elif app.stateY == "down":
+            play_moveDown(app)
 
  ###############################################################################
 
@@ -335,119 +379,357 @@ def generateDrone(app):
         x = characters.Drone(i, i + 1000)
         app.drones.append(x)
 
+    # Remove first few drones
     app.drones.pop(0)
-    app.drones.pop(1)
+    app.drones.pop(0)
 
-def drawDrone(app, canvas):
-    
     for aDrone in app.drones:
-        if aDrone == None:
-            continue
+
+
+        # Find spawn point for the drone
         for i in range(len(app.terrain)):
             point = None
             if aDrone.spawn < app.terrain[i][0]:
                 point = app.terrain[i]
                 break
 
-            
+        # Skip if there is no midpoint
         if point == None: 
                 continue
 
-        canvas.create_rectangle(aDrone.body[0] + app.shifterX, point[1] - 450+ app.shifterY, 
-                                    aDrone.body[2]+ app.shifterX, point[1] -550  + app.shifterY , 
-                                    fill = "black", outline = "black")
+        aDrone.point.append(point)
 
-        canvas.create_oval(aDrone.eye[0] + app.shifterX, point[1] - 450+ app.shifterY , 
-                                    aDrone.eye[2]+ app.shifterX, point[1] -550  + app.shifterY, 
-                                    fill = "white", outline = "black")
-
-        canvas.create_oval(aDrone.pupil[0] + app.shifterX, point[1] -450+ app.shifterY, 
-                                    aDrone.pupil[2]+ app.shifterX, point[1] -500  + app.shifterY, 
-                                    fill = "black", outline = "white")
+    for aDrone in app.drones:
+        if aDrone.point == []:
+            app.drones.remove(aDrone)
 
 
-def moveDrone(app):
+def play_drawDrone(app, canvas):
+
     for aDrone in app.drones:
 
-        return
+        # Find spawn point for the drone
+        for i in range(len(app.terrain)):
+            point = None
+            if aDrone.spawn < app.terrain[i][0]:
+                point = app.terrain[i]
+                break
+
+        # Skip if there is no midpoint
+        if point == None: 
+                continue
+
+        # Draw drone
+        canvas.create_rectangle(aDrone.body[0] + app.shifterX, 
+                                point[1] - 600+ app.shifterY, 
+                                aDrone.body[2]+ app.shifterX, 
+                                point[1] - 700  + app.shifterY, 
+                                fill = "black", outline = "black")
+
+        canvas.create_oval(aDrone.eye[0] + app.shifterX, 
+                           point[1] - 600 + app.shifterY, 
+                           aDrone.eye[2]+ app.shifterX, 
+                           point[1] - 700  + app.shifterY, 
+                           fill = "white", outline = "black")
+
+        canvas.create_oval(aDrone.pupil[0] + app.shifterX, 
+                           point[1] - 600+ app.shifterY, 
+                           aDrone.pupil[2]+ app.shifterX, 
+                           point[1] - 650  + app.shifterY, 
+                           fill = "black", outline = "white")
+
+        canvas.create_polygon(aDrone.scanner[0]  + app.shifterX, 
+                              point[1] - 600+ app.shifterY,
+                              aDrone.scanner[2]  + app.shifterX, app.height,
+                              aDrone.scanner[3]  + app.shifterX, app.height, fill = "white")
+
+def play_moveDrone(app):
+
+    for aDrone in app.drones:
+
+        # Check if move is possible
+        if (((aDrone.body[0] + app.shifterX + app.droneDX > 
+            aDrone.patrolPoint2 + app.shifterX) or 
+            aDrone.body[0] + app.shifterX + (app.droneDX * -1)) >= 
+            aDrone.patrolPoint1 + app.shifterX):
+            app.droneDX = app.droneDX  * -1
+        
+        # Move each part
+        aDrone.body[0] += app.droneDX
+        aDrone.body[2] += app.droneDX
+        aDrone.eye[0] += app.droneDX
+        aDrone.eye[2] += app.droneDX
+        aDrone.pupil[0] += app.droneDX
+        aDrone.pupil[2] += app.droneDX
+        aDrone.scanner[0] += app.droneDX
+        aDrone.scanner[2] += app.droneDX
+        aDrone.scanner[3] += app.droneDX
+
 
 ################################################################################
 
-def play_generateSpikes(app):    
-    for i in range(len(app.terrain)):
-        app.spikes.append(app.terrain[i])
+def play_generateSpikes(app):   
 
+    # Create a temporary list of spikes 
+    tempList = []
+    for i in range(2, len(app.terrain) - 2):
 
-    
-    for i in range(1, len(app.terrain) - 2):
+            # Change number of spikes based on progress
+            if 0 < i <= 25:
+                numberOfSpikes = random.randint(1, 3)
 
-            if 0 < i <= 50:
-                numberOfSpikes = random.randint(3,6)
+            elif 25 < i <= 75:
+                numberOfSpikes = random.randint(3, 6)
 
-            elif 50 < i <= 100:
-                numberOfSpikes = random.randint(5,10)
+            elif 75 < i <= 150:
+                numberOfSpikes = random.randint(6, 9)
 
             else:
-                numberOfSpikes = random.randint(8,10)
+                numberOfSpikes = random.randint(1, 9)
 
-            
-            #difference = abs(app.terrain[i+2][0] - app.terrain[i][0])
-            #spikesDX = random.randint(0, difference)
-            #x += spikesDX
-            
-            app.spikes.append((app.terrain[i][0], app.terrain[i][1], numberOfSpikes))
-            
+            # Find x point to spawn the first spike on
+            difference = abs(app.terrain[i + 2][0] - app.terrain[i][0])
+            spikesDX = random.randint(0, difference // 2)
+
+            # Make sure the spikes are in range
+            if app.terrain[i][0] + spikesDX < app.terrain[i + 1][0]:
+
+                # Create new spikes
+                newSpikes = characters.Spikes(app.terrain[i][0] + spikesDX, 
+                                              app.terrain[i][1])
+
+                # Create appropriate number of spikes
+                for i in range(numberOfSpikes):
+                    if i == 0:
+                        continue
+
+                    # Add spikes coordinates to attributes
+                    else:
+                        nextPoint1 = newSpikes.coords[-1]
+                        nextPoint2 = (newSpikes.coords[-2][0] + 10, 
+                                      newSpikes.coords[-2][1])
+                        nextPoint3 = (newSpikes.coords[-3][0] + 20, 
+                                      newSpikes.coords[-3][1])
+                        newSpikes.coords.append(nextPoint1)
+                        newSpikes.coords.append(nextPoint2)
+                        newSpikes.coords.append(nextPoint3)
+
+                tempList.append(newSpikes)
+
+    # Add every 4th item to the spikes list
+    for i in range(len(tempList)):
+
+        if i % 4 == 0:
+            app.spikes.append(tempList[i])
 
 def play_drawSpikes(app,canvas):
 
-    '''def play_isAbove(app):
-    
-    # Check if the block is above everything
-    
-    
+    # Draw spikes
+    for i in range(len(app.spikes)):
 
-    for i in range(0, len(app.terrain) - 1):
-        if ((app.width // 2 - 30) < (app.terrain[i][0] + app.shifterX)):
-            point = app.terrain[i]
-            break
+        spikesCoords = app.spikes[i].coords
+        
+        for i in range(len(spikesCoords) // 3):
+                canvas.create_polygon(spikesCoords[3*i][0] + app.shifterX, 
+                                      spikesCoords[3*i][1]+ app.shifterY,
+                                      spikesCoords[3*i+1][0]+ app.shifterX, 
+                                      spikesCoords[3*i+1][1]+ app.shifterY,
+                                      spikesCoords[3*i+2][0]+ app.shifterX, 
+                                      spikesCoords[3*i+2][1]+ app.shifterY, 
+                                      fill ="black")
+
+def play_spikeCollision(app):
+    for spikes in app.spikes:
+        midpoints = []
+        for i in range(len(spikes.coords)-1):
+            midpoints.append(midpoint(spikes.coords[i][0], spikes.coords[i][1], 
+                                      spikes.coords[i + 1][0], spikes.coords[i + 1][1],))
 
 
-    if point[1] + app.shifterY < 2 * app.height // 3 + 30:
-                return [False]
+        for point in midpoints:
+            if app.cube[2] <= point[0] + app.shifterX <= app.cube[0]:
+                if app.cube[3] <= point[1] + app.shifterY <= app.cube[1]:
+                    return True
 
-    return [True, point]'''
-    for i in range(2, len(app.spikes), 2):
-        x = app.spikes[i]
-        canvas.create_polygon(x[0]+ app.shifterX, x[1]+ app.shifterY,
-                              x[0] + 15 + app.shifterX, x[1] - 30 + app.shifterY,
-                              x[0] + 30 + app.shifterX, x[1] + app.shifterY)
+        for point in spikes.coords:
+            if app.cube[2] <= point[0] + app.shifterX <= app.cube[0]:
+                if app.cube[3] <= point[1] + app.shifterY <= app.cube[1]:
+                    return True
 
-        '''
-        canvas.create_polygon(x[0] + app.shifterX,x[1] + app.shifterY,
-                              x[2]+ app.shifterX,x[3]+ app.shifterY,
-                              x[4]+ app.shifterX,x[5]+ app.shifterY, fill = "white")
-                              '''
+    return False
+
+def midpoint(x0, y0, x1, y1):
+    return (((x0 + x1) / 2, (y0 + y1) / 2))
 
 ################################################################################
+
+def play_generateTurtles(app):
+
+    tempList = []
+
+    # Create new turtles
+    for i in range(2, len(app.terrain) - 2):
+        if app.terrain[i + 1][0] - app.terrain[i][0] >= 300:
+            newTurtle = characters.Turtle(app.terrain[i][0] + 5, 
+                                        app.terrain[i][1], i)
+            tempList.append(newTurtle)
+
+    # Only add appropriate turtles
+    for i in range(len(tempList)):
+        if i % 2 == 0:
+            app.turtles.append(tempList[i])
+
+def play_drawTurtles(app, canvas):
+    
+    # Draw turtles
+    for i in range(len(app.turtles)):
+        
+        canvas.create_oval(app.turtles[i].coords[0][0] + app.shifterX, 
+                             app.turtles[i].coords[0][1] + app.shifterY, 
+                             app.turtles[i].coords[1][0] + app.shifterX,
+                             app.turtles[i].coords[1][1] + app.shifterY, 
+                             fill = "black")
+
+        canvas.create_rectangle(app.turtles[i].coords[2][0] + app.shifterX, 
+                             app.turtles[i].coords[2][1] + app.shifterY, 
+                             app.turtles[i].coords[3][0] + app.shifterX,
+                             app.turtles[i].coords[3][1] + app.shifterY, 
+                             fill = "black")
+
+
+def play_moveTurtles(app):
+
+    for aTurtle in app.turtles:
+        # Check if move is possible
+        if (((aTurtle.coords[3][0] + app.shifterX + app.turtleDX >= 
+            app.terrain[aTurtle.i + 1][0] + app.shifterX) or 
+
+            aTurtle.coords[0][0] + app.shifterX + (app.turtleDX)) <= 
+            app.terrain[aTurtle.i][0] + app.shifterX):
+            app.turtleDX = app.turtleDX  * -1
+        
+        # Move each part
+        aTurtle.coords[0][0] += app.turtleDX
+        aTurtle.coords[1][0] += app.turtleDX
+        aTurtle.coords[2][0] += app.turtleDX
+        aTurtle.coords[3][0] += app.turtleDX
+
+
+def play_touchingTurtle(app):
+
+    for i in range(len(app.turtles)):
+        turtle = app.turtles[i]
+        centerX = turtle.coords[0][0] + 20
+        centerY = turtle.coords[0][1] + 20
+
+        point1 = [centerX - (10 * (2 ** 0.5)), centerY - (10 * (2 ** 0.5))]
+        point2 = [centerX - (10 * (2 ** 0.5)), centerY + (10 * (2 ** 0.5))]
+        point3 = [centerX - 20, centerY]
+        point4 = [centerX, centerY + 20]
+        point5 = [centerX, centerY - 20]
+        point6 = [centerX + 60, centerY + 20]
+        point7 = [centerX + 60, centerY - 20]
+
+        listOfPoints = [point1, point2, point3, point4, point5, point6, point7]
+
+        for point in listOfPoints:
+            if app.cube[2] <= point[0] + app.shifterX <= app.cube[0]:
+                if app.cube[3] <= point[1] + app.shifterY <= app.cube[1]:
+                    return True
+
+    return False
+    
+################################################################################
+
+def play_generateCrushers(app):
+
+    tempList = []
+    
+    for i in range(len(app.terrain) - 2):
+
+        # Create start point of crusher
+        point1 = app.terrain[i]
+        point2 = app.terrain[i + 2]
+        startPoint = ((point1[0] + point2[0]) // 2, point2[1] - 450)
+
+        # Create crusher and add to list
+        newCrusher = characters.Crusher(startPoint[0] ,startPoint[1])
+        tempList.append(newCrusher)
+
+    # Add appropriate crushers to list
+    for i in range(len(tempList)):
+        if i % 5 == 0:
+            if i >= 3:
+                app.crushers.append(tempList[i])
+
+
+
+def play_drawCrushers(app, canvas):
+
+    # Draw crushers
+    for i in range(len(app.crushers)):
+        canvas.create_rectangle(app.crushers[i].coords[0][0] - 50 +app.shifterX, 
+                                app.crushers[i].coords[0][1] - 25 +app.shifterY,
+                                app.crushers[i].coords[0][0] + 50 +app.shifterX, 
+                                app.crushers[i].coords[0][1] + 25 +app.shifterY,
+                                fill = "black", outline = "black")
+
+        canvas.create_oval(app.crushers[i].ball[0][0] - 25 + app.shifterX, 
+                            app.crushers[i].ball[0][1] - 25 + app.shifterY,
+                      app.crushers[i].ball[0][0] + 25 + app.shifterX, 
+                      app.crushers[i].ball[0][1] +25 + app.shifterY,
+                      fill = "black", outline = "black")
+
+def play_dropBall(app):
+    for i in range(len(app.crushers)):
+        if app.crushers[i].ball[0][1] + app.shifterY >= app.height:
+            app.crushers[i].ball[0][1] = app.crushers[i].coords[0][1]
+        else:
+            app.crushers[i].ball[0][1] += 3
+        
+def play_ballCollision(app):
+    for i in range(len(app.crushers)):
+
+        if app.cube[2] <= app.crushers[i].ball[0][0] + 25 + app.shifterX <= app.cube[0]:
+            if app.cube[3] <= app.crushers[i].ball[0][1] + app.shifterY <= app.cube[1]:
+                return True
+
+
+        if app.cube[2] <= app.crushers[i].ball[0][0] - 25 + app.shifterX <= app.cube[0]:
+            if app.cube[3] <= app.crushers[i].ball[0][1] + app.shifterY <= app.cube[1]:
+                return True
+
+        if app.cube[2] <= app.crushers[i].ball[0][0] + app.shifterX <= app.cube[0]:
+            if app.cube[3] <= app.crushers[i].ball[0][1] + app.shifterY + 25 <= app.cube[1]:
+                return True
+
+        if app.cube[2] <= app.crushers[i].ball[0][0] + app.shifterX <= app.cube[0]:
+            if app.cube[3] <= app.crushers[i].ball[0][1] + app.shifterY - 25 <= app.cube[1]:
+                return True
+                       
+
+    return False
+
+################################################################################
+
 def play_generateTerrain(app):
-    while len(app.terrain) <= 50:
+
+    while len(app.terrain) <= 25:
+
         # Take the points we just had
         oldX = app.terrain[-1][0]
         oldY = app.terrain[-1][1]
 
         # Choose a random number to change x by
-        dx = random.randrange(100, 200, 5)
-
-        # Get the cube height
-        
+        dx = random.randrange(100, 200, 5)    
 
         # Get list of possible change in y
         dyList = [2.5 * 30, 
                 3 * 30,
-                4 * 30, 5 * 30]
+                4 * 30]
 
         # Choose y 
-        i = random.randint(0, 3)
+        i = random.randint(0, 2)
         dy = dyList[i]
 
         # Establish new x coord
@@ -473,15 +755,13 @@ def play_generateTerrain(app):
         app.terrain.append(newPoint1)
         app.terrain.append(newPoint2)
 
-
-
-    while 50 < len(app.terrain) <= 100:
+    while 25 < len(app.terrain) <= 75:
         # Take the points we just had
         oldX = app.terrain[-1][0]
         oldY = app.terrain[-1][1]
 
         # Choose a random number to change x by
-        dx = random.randrange(150, 250, 5)
+        dx = random.randrange(200, 300, 5)
 
         dyList = [2.5 * 30, 
                 3 * 30,
@@ -514,13 +794,13 @@ def play_generateTerrain(app):
         app.terrain.append(newPoint1)
         app.terrain.append(newPoint2)
 
-    while 100 < len(app.terrain) <= 150:
+    while 75 < len(app.terrain) <= 150:
         # Take the points we just had
         oldX = app.terrain[-1][0]
         oldY = app.terrain[-1][1]
 
         # Choose a random number to change x by
-        dx = random.randrange(200, 300, 5)
+        dx = random.randrange(300, 350, 5)
 
         # Get the cube height
         dyList = [2.5 * 30, 
@@ -530,7 +810,6 @@ def play_generateTerrain(app):
         # Choose y 
         i = random.randint(0, 3)
         dy = dyList[i]
-
 
         # Establish new x coord
         newX = int(oldX + dx)
@@ -555,15 +834,14 @@ def play_generateTerrain(app):
         app.terrain.append(newPoint1)
         app.terrain.append(newPoint2)
 
-
-
     while 150 < len(app.terrain) <= 200:
+
         # Take the points we just had
         oldX = app.terrain[-1][0]
         oldY = app.terrain[-1][1]
 
         # Choose a random number to change x by
-        dx = random.randrange(300, 400, 5)
+        dx = random.randrange(200, 400, 5)
 
         dyList = [2.5 * 30, 
                 3 * 30,
@@ -596,11 +874,8 @@ def play_generateTerrain(app):
         app.terrain.append(newPoint1)
         app.terrain.append(newPoint2)
 
-
-
 # Draw the terrain
 def play_drawTerrain(app, canvas):
-
 
     for i in range(len(app.terrain) - 1):
         canvas.create_rectangle(app.terrain[i][0] + app.shifterX, 
@@ -611,34 +886,27 @@ def play_drawTerrain(app, canvas):
 
 def play_redrawAll(app, canvas):
 
-    
     canvas.create_rectangle(0, 0, app.width, app.height, fill = "grey35")
     # Draws cube
     play_drawCube(app, canvas)
+
+
+
+    play_drawSpikes(app,canvas)
+    play_drawDrone(app, canvas)
 
     # Draws terrain
     play_drawTerrain(app, canvas)
     # Create pointless terrain to the left of x = 0
     canvas.create_rectangle(-100000, app.height, 0, 555, fill = "black")
 
-    play_drawSpikes(app,canvas)
-    drawDrone(app, canvas)
-
-
-
+    play_drawTurtles(app, canvas)
+    play_drawCrushers(app, canvas)
 
     canvas.create_text(app.width // 2, 20, 
                        text = f"Score: {app.distanceNow // 10}", 
                        fill = "black", font = "Arial 30" )
-    
 
 runApp(width = 1440, height = 770)
 
-
-
-
 ################################################################################
-################################################################################
-################################################################################
-################################################################################
-
