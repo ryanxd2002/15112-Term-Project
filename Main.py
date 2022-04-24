@@ -1,11 +1,14 @@
 from cmu_112_graphics import *
-import math, random, copy, characters, seperation
+from sound import *
+import random, characters, importedFunctions, pygame
 ################################################################################
 ################################################################################
 
 def appStarted(app):
 
+    app.played = 0
     app.cubeColor = "blue"
+    app.holderColor = None
 
     ########################################
     # Generate the game and its attributes #
@@ -36,8 +39,6 @@ def appStarted(app):
                   app.width // 2 - 30, 
                   2 * app.height // 3 - 30]
 
-    
-
     # Velocities and other shifters
     app.gravity = 0.2
     app.velocityX = 3
@@ -51,16 +52,15 @@ def appStarted(app):
     app.helpMode = False
     app.showHelp = True
 
-
     # Set high score 
-    app.highScore = int(seperation.readFile("score.txt"))
+    app.highScore = int(importedFunctions.readFile("score.txt"))
 
     app.stateX = "left"
     app.stateY = "down"
 
     # Screen
     app.mode = "home"
-    app.modes = ["home", "help", "play", "scores", "gameOver"]
+    app.modes = ["home", "help", "play", "scores", "gameOver", "customize"]
 
     # Checks total distance moved
     app.distanceMoved = 0
@@ -75,8 +75,19 @@ def appStarted(app):
 
     # Timer Delay
     app.timerDelay = 1
+    
+    # https://www.cs.cmu.edu/~112/notes/notes-animations-
+    # part4.html#playingSoundsWithPygame
+    # Music
+    
+    pygame.mixer.init()
 
-    app.shots = []
+    # https://www.youtube.com/watch?v=JFJMDjLD49U
+    app.sound = Sound("theMusic.mp3")
+
+# Sound
+def appStopped(app):
+    app.sound.stop()
 
 ################################################################################
 
@@ -115,6 +126,10 @@ def home_redrawAll(app, canvas):
         canvas.create_text(200, 225, text = "CLICK HERE!!!", font = "Arial 50", 
                         fill = "white")
 
+    canvas.create_rectangle(1200, 40, 1400, 140, outline = "white", width = 5)
+    canvas.create_text(1300, 90, text = "Change color", fill = "white",
+                       font = " Arial 25")
+    
 def home_mousePressed(app, event):
 
     # Pressed play button
@@ -134,9 +149,10 @@ def home_mousePressed(app, event):
             app.mode = "help"
             app.showHelp = False
 
-def home_keyPressed(app, event):
-    if event.key == "e":
-        app.mode = "gameOver"
+    if 1200 <= event.x <= 1400:
+        if 40 <= event.y <= 140:
+            app.mode = "customize"
+
 ################################################################################
 
 # Draws help screen
@@ -182,8 +198,11 @@ def scores_redrawAll(app, canvas):
     canvas.create_rectangle(50, 300, 1390, 700,
                             outline = "white", width = "5")
 
-    canvas.create_text(770, 500, text = f"{app.highScore}",
+    canvas.create_text(app.width // 2, 500, text = f"{app.highScore}",
                        fill = "white", font = "Arial 200")
+
+    canvas.create_text(app.width // 2, 735, text = "Press Esc to return home",
+                       fill = "white", font = "Arial 25")
 
 def scores_keyPressed(app, event):
 
@@ -203,15 +222,19 @@ def gameOver_redrawAll(app, canvas):
                            text = f"Score: {app.distanceNow // 10}", 
                            font = "Arial 200", fill = "white")
 
+        canvas.create_text(app.width // 2, 700, 
+                           text = "Press Esc to return Home", 
+                           font = "Arial 50", fill = "white")
+
 # Set high score
 def gameOver_setHighScore(app):
-    app.highScore = seperation.readFile("score.txt")
+    app.highScore = importedFunctions.readFile("score.txt")
 
 # Get the high score
 def gameOver_getHighScore(app):
         if app.distanceNow // 10 > app.highScore:
-            seperation.truncate("score.txt")
-            seperation.writeFile("score.txt", f"{app.distanceNow // 10}")
+            importedFunctions.truncate("score.txt")
+            importedFunctions.writeFile("score.txt", f"{app.distanceNow // 10}")
 
 def gameOver_keyPressed(app, event):
 
@@ -219,15 +242,7 @@ def gameOver_keyPressed(app, event):
     if event.key == "Escape":
        appStarted(app)
        app.showHelp = False
-
 ################################################################################
-
-# Draws cube
-def play_drawCube(app, canvas):
-    
-    # Draws cube
-    canvas.create_rectangle(app.cube[0], app.cube[1], app.cube[2], app.cube[3], 
-                            fill = app.cubeColor, outline = app.cubeColor)
 
 # Tells whether block is hidden
 def play_isHidden(app):
@@ -246,13 +261,14 @@ def play_isHidden(app):
                 break
 
     # Check if hidden
-    if ((point[0] + app.shifterX) <= (app.width // 2 - 20) and 
-          (2 * app.height // 3 - 30 >= point1[1] + app.shifterY)):
+    if ((point[0] + app.shifterX) <= (app.width // 2) and 
+          (2 * app.height // 3 + 30 >= point1[1] + app.shifterY)):
         return True
     
     return False
     
 def play_keyPressed(app, event):
+
     if app.gameOver == False:
         
         # Left, Right
@@ -286,7 +302,6 @@ def play_keyPressed(app, event):
         # Start AI / hands off mode
         elif event.key == "h":
             app.helpMode = not app.helpMode
-
 
     elif event.key == "Escape":
         appStarted(app)
@@ -354,6 +369,11 @@ def play_moveDown(app):
 # Timerfired
 def play_timerFired(app):
 
+    # Make sure the sound only starts playing once
+    if app.mode == "play" and app.played < 1:
+        app.sound.start(loops=-1)
+        app.played += 1
+
     if app.helpMode == True:
         play_helpMode(app)
 
@@ -365,7 +385,7 @@ def play_timerFired(app):
             if app.drones[i].point == []:
                 continue
             
-            if seperation.separating_axis_theorem(
+            if importedFunctions.separating_axis_theorem(
                 [(app.width // 2 + 30, 2 * app.height // 3 + 30),
                  (app.width // 2 - 30,2 * app.height // 3 - 30)],
                 [(app.drones[i].scanner[0] + app.shifterX, 
@@ -383,21 +403,27 @@ def play_timerFired(app):
                 app.mode = "gameOver"
                 gameOver_getHighScore(app)
                 gameOver_setHighScore(app)
+                app.sound.stop()
                 
 
+        # Change colors appropriately
+        if app.cubeColor != "black":
+            app.holderColor = app.cubeColor
+            
         if play_isHidden(app):
             app.cubeColor = "black"
 
         else:
-            app.cubeColor = "blue"
+            app.cubeColor = app.holderColor
 
         # Check for other detection
-        if (play_turtleCollision(app) or 
+        if ((play_turtleCollision(app) and not play_isHidden(app)) or 
            (play_ballCollision(app) and not play_isHidden(app))
             or play_spikeCollision(app)):
                 app.mode = "gameOver"
                 gameOver_getHighScore(app)
                 gameOver_setHighScore(app)
+                app.sound.stop()
 
         # Moves objects
         play_moveDrone(app)
@@ -428,16 +454,139 @@ def play_timerFired(app):
 
 def play_helpMode(app):
 
-    # Check if it is on a bound to see if will jump
-
-    if play_isHidden(app):
-
-        if ((play_isAbove(app)[1][1] + app.shifterY - 6) < 
-                (2 * app.height // 3 + 30)):
-                app.velocityY = -10
-
     if app.distanceNow <= 5:
         app.stateX = "right"
+
+    # Check for spikes and jump if there are any in the way
+
+    for i in range(len(app.spikes)):
+        if app.stateX == "right":
+            for j in range(40, 0, -1):
+                if (app.spikes[i].coords[0][0] + app.shifterX < 
+                    (app.distanceNow + j)
+                    < app.spikes[i].coords[-1][0] + app.shifterX):
+                    if ((play_isAbove(app)[1][1] + app.shifterY - 6) < 
+                        (2 * app.height // 3 + 30)):
+                        app.velocityY = -10
+
+        elif app.stateX == "left":
+            for j in range(40, 0, -1):
+                if (app.spikes[i].coords[0][0] + app.shifterX < 
+                    (app.distanceNow - j)
+                    < app.spikes[i].coords[-1][0] + app.shifterX):
+                    if ((play_isAbove(app)[1][1] + app.shifterY - 6) < 
+                        (2 * app.height // 3 + 30)):
+                        app.velocityY = -10
+
+    # Check if it is on a bound to see if will jump
+    if app.stateX == "right":
+        if play_isHidden(app):
+
+            if ((play_isAbove(app)[1][1] + app.shifterY - 6) < 
+                    (2 * app.height // 3 + 30)):
+                    app.velocityY = -10
+
+################################################################################
+
+# Draw all the colors
+def customize_redrawAll(app, canvas):
+    canvas.create_rectangle(0, 0, app.width, app.height, fill = "black")
+    canvas.create_text(app.width // 2, 100, text = "Choose your color!", 
+                        font = "Arial 100", fill = "white")
+
+    canvas.create_rectangle(168, 270, 318, 420, fill = "crimson", 
+                            outline = "crimson")    
+    canvas.create_rectangle(168, 520, 318, 670, fill = "blue", 
+                            outline = "blue")
+
+    canvas.create_rectangle(486, 270, 636, 420, fill = "dark green", 
+                            outline = "dark green")
+
+    canvas.create_rectangle(486, 520, 636, 670, fill = "purple", 
+                            outline = "purple")
+
+    canvas.create_rectangle(804, 270, 954, 420, fill = "navy", 
+                            outline = "navy")
+
+    canvas.create_rectangle(804, 520, 954, 670, fill = "violet red", 
+                            outline = "violet red")
+
+    canvas.create_rectangle(1122, 270, 1272, 420, fill = "brown", 
+                            outline = "brown")
+    canvas.create_rectangle(1122, 520, 1272, 670, fill = "gold4", 
+                            outline = "gold4")
+
+    canvas.create_text(app.width // 2, 725, 
+                       text = "Press escape to return home", 
+                       font = "Arial 25", fill = "white")
+
+    customize_drawOutline(app, canvas)
+
+def customize_keyPressed(app, event):
+
+    # Go home
+    if event.key == "Escape":
+        app.mode = "home"
+
+# Choose color
+def customize_mousePressed(app, event):
+    if 168 <= event.x <= 318:
+        if 270 <= event.y <= 420:
+            app.cubeColor = "crimson"
+
+    if 168 <= event.x <= 318:
+        if 520 <= event.y <= 670:
+            app.cubeColor = "blue"
+
+    if 486 <= event.x <= 636:
+        if 270 <= event.y <= 420:
+            app.cubeColor = "dark green"
+
+    if 486 <= event.x <= 636:
+        if 520 <= event.y <= 670:
+            app.cubeColor = "purple"
+
+    if 804 <= event.x <= 954:
+        if 270 <= event.y <= 420:
+            app.cubeColor = "navy"
+
+    if 804 <= event.x <= 954:
+        if 520 <= event.y <= 670:
+            app.cubeColor = "violet red"
+
+    if 1122 <= event.x <= 1272:
+        if 270 <= event.y <= 420:
+            app.cubeColor = "brown"
+
+    if 1122 <= event.x <= 1272:
+        if 520 <= event.y <= 670:
+            app.cubeColor = "gold4"
+
+# Indicate color change
+def customize_drawOutline(app, canvas):
+    if app.cubeColor == "crimson":
+        canvas.create_rectangle(168, 270, 318, 420, fill = None, width = 5)
+
+    if app.cubeColor == "blue":
+        canvas.create_rectangle(168, 520, 318, 670, fill = None, width = 5)
+
+    if app.cubeColor == "dark green":
+        canvas.create_rectangle(486, 270, 636, 420, fill = None, width = 5)
+
+    if app.cubeColor == "purple":
+        canvas.create_rectangle(486, 520, 636, 670, fill = None, width = 5)
+
+    if app.cubeColor == "navy":
+        canvas.create_rectangle(804, 270, 954, 420, fill = None, width = 5)
+
+    if app.cubeColor == "violet red":
+        canvas.create_rectangle(804, 520, 954, 670, fill = None, width = 5)
+
+    if app.cubeColor == "brown":
+        canvas.create_rectangle(1122, 270, 1272, 420, fill = None, width = 5)
+
+    if app.cubeColor == "gold4":
+        canvas.create_rectangle(1122, 520, 1272, 670, fill = None, width = 5)
 
 ################################################################################
 
@@ -453,7 +602,6 @@ def generateDrone(app):
     app.drones.pop(0)
 
     for aDrone in app.drones:
-
 
         # Find spawn point for the drone
         for i in range(len(app.terrain)):
@@ -472,7 +620,6 @@ def generateDrone(app):
         if aDrone.point == []:
             app.drones.remove(aDrone)
 
-
 def play_drawDrone(app, canvas):
 
     for aDrone in app.drones:
@@ -490,20 +637,20 @@ def play_drawDrone(app, canvas):
 
         # Draw drone
         canvas.create_rectangle(aDrone.body[0] + app.shifterX, 
-                                point[1] - 600+ app.shifterY, 
-                                aDrone.body[2]+ app.shifterX, 
+                                point[1] - 600 + app.shifterY, 
+                                aDrone.body[2] + app.shifterX, 
                                 point[1] - 700  + app.shifterY, 
                                 fill = "black", outline = "black")
 
         canvas.create_oval(aDrone.eye[0] + app.shifterX, 
                            point[1] - 600 + app.shifterY, 
-                           aDrone.eye[2]+ app.shifterX, 
+                           aDrone.eye[2] + app.shifterX, 
                            point[1] - 700  + app.shifterY, 
                            fill = "white", outline = "black")
 
         canvas.create_oval(aDrone.pupil[0] + app.shifterX, 
-                           point[1] - 600+ app.shifterY, 
-                           aDrone.pupil[2]+ app.shifterX, 
+                           point[1] - 600 + app.shifterY, 
+                           aDrone.pupil[2] + app.shifterX, 
                            point[1] - 650  + app.shifterY, 
                            fill = "black", outline = "white")
 
@@ -535,7 +682,6 @@ def play_moveDrone(app):
         aDrone.scanner[2] += app.droneDX
         aDrone.scanner[3] += app.droneDX
 
-
 ################################################################################
 
 def play_generateSpikes(app):   
@@ -549,13 +695,13 @@ def play_generateSpikes(app):
                 numberOfSpikes = random.randint(1, 3)
 
             elif 25 < i <= 75:
-                numberOfSpikes = random.randint(1, 5)
+                numberOfSpikes = random.randint(2, 5)
 
             elif 75 < i <= 150:
-                numberOfSpikes = random.randint(1, 7)
+                numberOfSpikes = random.randint(3, 7)
 
             else:
-                numberOfSpikes = random.randint(3, 7)
+                numberOfSpikes = random.randint(4, 7)
 
             # Find x point to spawn the first spike on
             difference = abs(app.terrain[i + 2][0] - app.terrain[i][0])
@@ -592,7 +738,7 @@ def play_generateSpikes(app):
             probability = None
 
             if 0 < i <= 25:
-                probability = random.randint(1, 7)
+                probability = random.randint(1, 6)
 
             elif 75 < i <= 150:
                 probability = random.randint(1, 4)
@@ -655,7 +801,7 @@ def play_generateTurtles(app):
 
     # Create new turtles
     for i in range(2, len(app.terrain) - 2):
-        if app.terrain[i + 1][0] - app.terrain[i][0] >= 150:
+        if app.terrain[i + 1][0] - app.terrain[i][0] >= 200:
             newTurtle = characters.Turtle(app.terrain[i][0] + 5, 
                                         app.terrain[i][1], i)
             tempList.append(newTurtle)
@@ -663,8 +809,8 @@ def play_generateTurtles(app):
     # Only add appropriate turtles
     for i in range(len(tempList)):
         if i > 5:
-            if i % 2 == 0:
-                app.turtles.append(tempList[i])
+            if i % 2 == 1:
+                app.turtles.append(tempList[i]) 
 
 def play_drawTurtles(app, canvas):
     
@@ -683,7 +829,6 @@ def play_drawTurtles(app, canvas):
                              app.turtles[i].coords[3][1] + app.shifterY, 
                              fill = "black")
 
-
 def play_moveTurtles(app):
 
     for aTurtle in app.turtles:
@@ -701,22 +846,21 @@ def play_moveTurtles(app):
         aTurtle.coords[2][0] += app.turtleDX
         aTurtle.coords[3][0] += app.turtleDX
 
-
 def play_turtleCollision(app):
 
     # Find points on turtle
     for i in range(len(app.turtles)):
         turtle = app.turtles[i]
-        centerX = turtle.coords[0][0] + 20
-        centerY = turtle.coords[0][1] + 20
+        centerX = turtle.coords[0][0] + 10
+        centerY = turtle.coords[0][1] + 10
 
-        point1 = [centerX - (10 * (2 ** 0.5)), centerY - (10 * (2 ** 0.5))]
-        point2 = [centerX - (10 * (2 ** 0.5)), centerY + (10 * (2 ** 0.5))]
-        point3 = [centerX - 20, centerY]
-        point4 = [centerX, centerY + 20]
-        point5 = [centerX, centerY - 20]
-        point6 = [centerX + 60, centerY + 20]
-        point7 = [centerX + 60, centerY - 20]
+        point1 = [centerX - (5 * (2 ** 0.5)), centerY - (5 * (2 ** 0.5))]
+        point2 = [centerX - (5 * (2 ** 0.5)), centerY + (5 * (2 ** 0.5))]
+        point3 = [centerX - 10, centerY]
+        point4 = [centerX, centerY + 10]
+        point5 = [centerX, centerY - 10]
+        point6 = [centerX + 30, centerY + 10]
+        point7 = [centerX + 30, centerY - 10]
 
         listOfPoints = [point1, point2, point3, point4, point5, point6, point7]
 
@@ -1006,14 +1150,15 @@ def play_redrawAll(app, canvas):
     canvas.create_rectangle(0, 0, app.width, app.height, fill = "grey35")
 
     # Draws enemies
-    play_drawCrushers(app, canvas)
 
-    play_drawSpikes(app,canvas)
-    play_drawTurtles(app, canvas)
     play_drawDrone(app, canvas)
+    play_drawSpikes(app,canvas)
+    play_drawCrushers(app, canvas)
+    play_drawTurtles(app, canvas)
 
     # Draws cube
-    play_drawCube(app, canvas)
+    canvas.create_rectangle(app.cube[0], app.cube[1], app.cube[2], app.cube[3], 
+                            fill = app.cubeColor, outline = app.cubeColor)
 
     # Draws terrain
     play_drawTerrain(app, canvas)
@@ -1033,8 +1178,15 @@ def play_redrawAll(app, canvas):
                        text = "PAUSED",
                        font = "Arial 200", fill = "white")
 
-
+    # Draw help mode indicator
+    if app.helpMode == True:
+        canvas.create_rectangle(20, 20, 200, 100, fill = "yellow",
+                                outline = "yellow")
+        canvas.create_text(110, 60, text = "Help mode ON",
+                           font = "Arial 25 bold", fill = "black")
 
 runApp(width = 1440, height = 770)
-
 ################################################################################
+
+
+

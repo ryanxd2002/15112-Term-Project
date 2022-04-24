@@ -43,8 +43,6 @@ class Drone:
 
         self.point = []
 
-################################################################################
-
 class Spikes:
     def __init__(self, x, y):
 
@@ -58,7 +56,7 @@ class Turtle:
         self.i = i
 
         # Create coords
-        self.coords = [[x, y - 40], [x + 40, y], [x + 20, y - 40], [x + 80, y]]
+        self.coords = [[x, y - 20], [x + 20, y], [x + 10, y - 20], [x + 40, y]]
 
 class Crusher:
     def __init__(self, x, y):
@@ -67,6 +65,3 @@ class Crusher:
         self.coords = [(x,y)]
 
         self.ball = [[x, y]]
-
-
-
