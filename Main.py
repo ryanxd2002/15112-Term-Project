@@ -58,6 +58,16 @@ def appStarted(app):
     app.stateX = "left"
     app.stateY = "down"
 
+    # Hover
+    app.hover1 = False
+    app.hover2 = False
+    app.hover3 = False
+    app.hover4 = False
+
+    # Check drone flash
+    app.flash = True
+    app.flashCount = 0
+
     # Screen
     app.mode = "home"
     app.modes = ["home", "help", "play", "scores", "gameOver", "customize"]
@@ -129,6 +139,25 @@ def home_redrawAll(app, canvas):
     canvas.create_rectangle(1200, 40, 1400, 140, outline = "white", width = 5)
     canvas.create_text(1300, 90, text = "Change color", fill = "white",
                        font = " Arial 25")
+
+    if app.hover1 == True:
+        canvas.create_rectangle(app.width // 2 - 175, app.height // 2 + 100, 
+        app.width // 2 + 175, app.height // 2 - 100, fill = None, outline = "white",
+        width = "20")
+
+    if app.hover2 == True:
+        canvas.create_rectangle(app.width // 2 - 150, app.height // 2 + 150 , 
+        app.width // 2 + 150, app.height // 2 + 300, fill = None, outline = "white",
+        width = "20")
+
+    if app.hover3 == True:
+        canvas.create_rectangle(app.width // 2 - 150, app.height // 2 - 300, 
+        app.width // 2 + 150, app.height // 2 - 150, fill = None, outline = "white",
+        width = "20")
+
+    if app.hover4 == True:
+        canvas.create_rectangle(1200, 40, 1400, 140, fill = None, 
+                                outline = "white", width = "20")
     
 def home_mousePressed(app, event):
 
@@ -152,6 +181,47 @@ def home_mousePressed(app, event):
     if 1200 <= event.x <= 1400:
         if 40 <= event.y <= 140:
             app.mode = "customize"
+
+# Jacob Morin told me about mouseMoved
+def home_mouseMoved(app, event):
+
+    # Hover over the right button 
+
+    if (app.width // 2 - 175 <= event.x <= app.width // 2 + 175
+       and app.height // 2 - 100 <= event.y <= app.height // 2 + 100):
+            app.hover1 = True
+            app.hover2 = False
+            app.hover3 = False
+            app.hover4 = False
+
+    elif (app.width // 2 - 150 <= event.x <= app.width // 2 + 150 and
+        app.height // 2 + 150 <= event.y <= app.height // 2 + 300):
+            app.hover1 = False
+            app.hover2 = True
+            app.hover3 = False
+            app.hover4 = False
+
+    elif app.width // 2 - 150 <= event.x <= app.width // 2 + 150:
+        if app.height // 2 - 300 <= event.y <= app.height // 2 - 150:
+            app.hover1 = False
+            app.hover2 = False
+            app.hover3 = True
+            app.hover4 = False
+
+    elif 1200 <= event.x <= 1400:
+        if 40 <= event.y <= 140:
+            app.hover1 = False
+            app.hover2 = False
+            app.hover3 = False
+            app.hover4 = True
+
+    # Else don't highlight any square
+    else:
+            app.hover1 = False
+            app.hover2 = False
+            app.hover3 = False
+            app.hover4 = False
+
 
 ################################################################################
 
@@ -379,31 +449,37 @@ def play_timerFired(app):
 
     if app.paused == False:
 
+        # Check flash
+        app.flashCount += 1
+        if app.flashCount % 200 == 0:
+            app.flash = not app.flash
+
         # Check for drone detection
         for i in range(len(app.drones)):
 
             if app.drones[i].point == []:
                 continue
             
-            if importedFunctions.separating_axis_theorem(
-                [(app.width // 2 + 30, 2 * app.height // 3 + 30),
-                 (app.width // 2 - 30,2 * app.height // 3 - 30)],
-                [(app.drones[i].scanner[0] + app.shifterX, 
-                  app.drones[i].point[0][1] - 600+ app.shifterY),
-                 (app.drones[i].scanner[2]  + app.shifterX, app.height),
-                 (app.drones[i].scanner[3]  + app.shifterX, app.height)]):
-                                
-                                app.isSeen = True
+            if app.flash == True:
+                if importedFunctions.separating_axis_theorem(
+                    [(app.width // 2 + 30, 2 * app.height // 3 + 30),
+                    (app.width // 2 - 30,2 * app.height // 3 - 30)],
+                    [(app.drones[i].scanner[0] + app.shifterX, 
+                    app.drones[i].point[0][1] - 600+ app.shifterY),
+                    (app.drones[i].scanner[2]  + app.shifterX, app.height),
+                    (app.drones[i].scanner[3]  + app.shifterX, app.height)]):
+                                    
+                                    app.isSeen = True
 
-            else:
-                app.isSeen = False
+                else:
+                    app.isSeen = False
 
-            if app.isSeen == True and not play_isHidden(app):
-                
-                app.mode = "gameOver"
-                gameOver_getHighScore(app)
-                gameOver_setHighScore(app)
-                app.sound.stop()
+                if app.isSeen == True and not play_isHidden(app):
+                    
+                    app.mode = "gameOver"
+                    gameOver_getHighScore(app)
+                    gameOver_setHighScore(app)
+                    app.sound.stop()
                 
 
         # Change colors appropriately
@@ -654,11 +730,13 @@ def play_drawDrone(app, canvas):
                            point[1] - 650  + app.shifterY, 
                            fill = "black", outline = "white")
 
-        canvas.create_polygon(aDrone.scanner[0]  + app.shifterX, 
-                              point[1] - 600+ app.shifterY,
-                              aDrone.scanner[2]  + app.shifterX, app.height,
-                              aDrone.scanner[3]  + app.shifterX, app.height, 
-                              fill = "white")
+        # Draw flash
+        if app.flash == True:
+            canvas.create_polygon(aDrone.scanner[0]  + app.shifterX, 
+                                point[1] - 600+ app.shifterY,
+                                aDrone.scanner[2]  + app.shifterX, app.height,
+                                aDrone.scanner[3]  + app.shifterX, app.height, 
+                                fill = "white")
 
 def play_moveDrone(app):
 
@@ -738,7 +816,7 @@ def play_generateSpikes(app):
             probability = None
 
             if 0 < i <= 25:
-                probability = random.randint(1, 6)
+                probability = random.randint(1, 5)
 
             elif 75 < i <= 150:
                 probability = random.randint(1, 4)
@@ -1187,6 +1265,3 @@ def play_redrawAll(app, canvas):
 
 runApp(width = 1440, height = 770)
 ################################################################################
-
-
-
